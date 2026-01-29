@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>SGF Health Pro 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{margin:0;font-family:Segoe UI,Arial;background:#f4f8fb}
+header{background:linear-gradient(135deg,#0f5f53,#16a085);color:#fff;padding:25px;text-align:center}
+nav{background:#0c4b42;padding:10px;text-align:center}
+nav a{color:#fff;margin:0 12px;text-decoration:none;font-weight:600}
+nav a:hover{text-decoration:underline}
+.container{max-width:1200px;margin:auto;padding:20px}
+.section{margin-bottom:50px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}
+.card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.btn{background:#16a085;color:#fff;border:none;padding:8px 15px;border-radius:5px;cursor:pointer}
+.btn:hover{background:#138d75}
+input,select,textarea{width:100%;padding:8px;margin:5px 0;border:1px solid #ccc;border-radius:4px}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ddd;padding:8px;text-align:center}
+th{background:#16a085;color:#fff}
+footer{background:#0c4b42;color:#fff;text-align:center;padding:15px}
+#cartBox{position:fixed;top:0;right:0;width:320px;height:100%;background:#fff;border-left:2px solid #16a085;padding:15px;overflow:auto;display:none;z-index:999}
+</style>
+</head>
+<body>
+
+<header>
+<h1>🐺 SGF Health Pro</h1>
+<p>Nền tảng Sức Khỏe & Thương Mại Điện Tử 2026</p>
+</header>
+
+<nav>
+<a href="#shop">Shop</a>
+<a href="#disease">Bệnh học</a>
+<a href="#order">Đặt hàng</a>
+<a href="#payment">Thanh toán</a>
+<a href="#admin">Admin</a>
+<a href="#" onclick="toggleCart()">🛒 Giỏ</a>
+</nav>
+
+<div class="container">
+
+<!-- SHOP -->
+<section id="shop" class="section">
+<h2>Sản Phẩm</h2>
+<div class="grid" id="productList"></div>
+</section>
+
+<!-- DISEASE -->
+<section id="disease" class="section">
+<h2>Bệnh Học</h2>
+<div class="grid" id="diseaseList"></div>
+</section>
+
+<!-- ORDER -->
+<section id="order" class="section">
+<h2>Form Đặt Hàng</h2>
+<div class="card">
+<input id="cusName" placeholder="Họ tên">
+<input id="cusPhone" placeholder="SĐT">
+<input id="cusAddress" placeholder="Địa chỉ">
+<select id="productSelect"></select>
+<input id="qty" type="number" min="1" value="1">
+<button class="btn" onclick="createOrder()">Tạo đơn</button>
+</div>
+</section>
+
+<!-- PAYMENT -->
+<section id="payment" class="section">
+<h2>Thanh Toán</h2>
+<div class="card">
+<p>✅ Momo / ZaloPay / Bank QR</p>
+<button class="btn" onclick="genQR()">Tạo QR</button>
+<br><br>
+<div id="qrBox"></div>
+<p style="color:red">(Demo – tích hợp API khi deploy thật)</p>
+</div>
+</section>
+
+<!-- ADMIN -->
+<section id="admin" class="section">
+<h2>Admin Panel</h2>
+
+<div class="card">
+<h3>➕ Thêm Sản Phẩm</h3>
+<input id="pName" placeholder="Tên SP">
+<input id="pPrice" type="number" placeholder="Giá">
+<input id="pStock" type="number" placeholder="Tồn kho">
+<button class="btn" onclick="addProduct()">Thêm</button>
+</div>
+
+<br>
+
+<div class="card">
+<h3>📝 Thêm Bệnh Học</h3>
+<input id="dName" placeholder="Tên bệnh">
+<textarea id="dContent" placeholder="Mô tả"></textarea>
+<button class="btn" onclick="addDisease()">Đăng</button>
+</div>
+
+<br>
+
+<div class="card">
+<h3>📦 Quản Lý Đơn</h3>
+<button class="btn" onclick="exportExcel()">Xuất Excel</button>
+<table>
+<thead>
+<tr><th>ID</th><th>Tên</th><th>SĐT</th><th>SP</th><th>SL</th><th>Tổng</th></tr>
+</thead>
+<tbody id="orderTable"></tbody>
+</table>
+</div>
+
+<br>
+
+<div class="card">
+<h3>📊 Doanh Thu</h3>
+<p>Tổng: <b id="revenue">0</b> đ</p>
+</div>
+
+</section>
+
+</div>
+
+<!-- CART -->
+<div id="cartBox">
+<h3>🛒 Giỏ Hàng</h3>
+<div id="cartItems"></div>
+<p><b>Tổng:</b> <span id="cartTotal">0</span> đ</p>
+<button class="btn" onclick="checkout()">Đặt Hàng</button>
+<button class="btn" style="background:#999" onclick="toggleCart()">Đóng</button>
+</div>
+
+<footer>
+<p>© 2026 SGF Health Pro</p>
+</footer>
+
+<script>
+/* STORAGE */
+let products=JSON.parse(localStorage.getItem('products'))||[
+{name:'Viên Tim Mạch',price:350000,stock:100},
+{name:'Thảo Dược Gan',price:280000,stock:80},
+{name:'Canxi Xương',price:320000,stock:60}
+];
+
+let diseases=JSON.parse(localStorage.getItem('diseases'))||[
+{name:'Tim Mạch',content:'Tăng huyết áp, mỡ máu, suy tim'},
+{name:'Tiểu Đường',content:'Rối loạn insulin, biến chứng'},
+{name:'Gan',content:'Gan nhiễm mỡ, viêm gan'}
+];
+
+let orders=JSON.parse(localStorage.getItem('orders'))||[];
+let cart=[];
+
+init();
+
+/* INIT */
+function init(){
+ renderProducts();
+ renderDiseases();
+ renderSelect();
+ renderOrders();
+ calcRevenue();
+}
+
+/* SHOP */
+function renderProducts(){
+ let html='';
+ products.forEach((p,i)=>{
+  html+=`<div class='card'>
+  <h3>${p.name}</h3>
+  <p>Giá: ${p.price.toLocaleString()}đ</p>
+  <p>Tồn: ${p.stock}</p>
+  <button class='btn' onclick="addCart(${i})">Thêm giỏ</button>
+  </div>`;
+ });
+ productList.innerHTML=html;
+}
+
+function renderSelect(){
+ let html='';
+ products.forEach((p,i)=>{
+  html+=`<option value='${i}'>${p.name}</option>`;
+ });
+ productSelect.innerHTML=html;
+}
+
+/* DISEASE */
+function renderDiseases(){
+ let html='';
+ diseases.forEach(d=>{
+  html+=`<div class='card'><h3>${d.name}</h3><p>${d.content}</p></div>`;
+ });
+ diseaseList.innerHTML=html;
+}
+
+function addDisease(){
+ if(!dName.value||!dContent.value) return alert('Thiếu dữ liệu');
+ diseases.push({name:dName.value,content:dContent.value});
+ save();
+ renderDiseases();
+ dName.value='';dContent.value='';
+}
+
+/* CART */
+function toggleCart(){
+ cartBox.style.display=cartBox.style.display==='block'?'none':'block';
+}
+
+function addCart(i){
+ if(products[i].stock<=0) return alert('Hết hàng');
+ cart.push(products[i]);
+ renderCart();
+}
+
+function renderCart(){
+ let html='';
+ let total=0;
+ cart.forEach(p=>{
+  html+=`<div>${p.name} - ${p.price.toLocaleString()}đ</div>`;
+  total+=p.price;
+ });
+ cartItems.innerHTML=html;
+ cartTotal.innerText=total.toLocaleString();
+}
+
+/* ORDER */
+function createOrder(){
+ if(!cusName.value||!cusPhone.value||!cusAddress.value)
+  return alert('Nhập đủ thông tin');
+
+ let p=products[productSelect.value];
+ let q=Number(qty.value);
+
+ if(p.stock<q) return alert('Không đủ hàng');
+
+ let total=p.price*q;
+ p.stock-=q;
+
+ let order={
+  id:Date.now(),
+  name:cusName.value,
+  phone:cusPhone.value,
+  address:cusAddress.value,
+  product:p.name,
+  qty:q,
+  total
+ };
+
+ orders.push(order);
+ save();
+ init();
+ alert('Tạo đơn thành công');
+}
+
+function renderOrders(){
+ let html='';
+ orders.forEach(o=>{
+  html+=`<tr>
+  <td>${o.id}</td><td>${o.name}</td><td>${o.phone}</td>
+  <td>${o.product}</td><td>${o.qty}</td><td>${o.total.toLocaleString()}</td>
+  </tr>`;
+ });
+ orderTable.innerHTML=html;
+}
+
+/* ADMIN */
+function addProduct(){
+ if(!pName.value||!pPrice.value||!pStock.value)
+  return alert('Thiếu dữ liệu');
+
+ products.push({
+  name:pName.value,
+  price:Number(pPrice.value),
+  stock:Number(pStock.value)
+ });
+
+ save();
+ init();
+ pName.value='';pPrice.value='';pStock.value='';
+}
+
+/* PAYMENT QR */
+function genQR(){
+ let sum=orders.reduce((s,o)=>s+o.total,0);
+ let data='VCB|123456789|'+sum;
+ qrBox.innerHTML=
+ `<img src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${data}'>`;
+}
+
+/* EXPORT */
+function exportExcel(){
+ let csv='ID,Ten,SDT,DiaChi,SP,SL,Tong\n';
+ orders.forEach(o=>{
+  csv+=`${o.id},${o.name},${o.phone},${o.address},${o.product},${o.qty},${o.total}\n`;
+ });
+
+ let blob=new Blob([csv],{type:'text/csv'});
+ let a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='sgf_orders_2026.csv';
+ a.click();
+}
+
+/* REVENUE */
+function calcRevenue(){
+ let sum=orders.reduce((s,o)=>s+o.total,0);
+ revenue.innerText=sum.toLocaleString();
+}
+
+/* CHECKOUT */
+function checkout(){
+ if(cart.length==0) return alert('Giỏ trống');
+ alert('Vui lòng thanh toán theo QR / Momo / ZaloPay');
+}
+
+/* SAVE */
+function save(){
+ localStorage.setItem('products',JSON.stringify(products));
+ localStorage.setItem('orders',JSON.stringify(orders));
+ localStorage.setItem('diseases',JSON.stringify(diseases));
+}
+</script>
+
+</body>
+</html>
