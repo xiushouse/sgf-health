@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>SGF Health - Full System 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{font-family:Arial;margin:0;background:#f4f8fb}
+header{background:#16a085;color:#fff;padding:20px;text-align:center}
+nav{background:#0f5f53;padding:10px;text-align:center}
+nav a{color:#fff;margin:0 12px;text-decoration:none;font-weight:bold}
+.container{max-width:1200px;margin:auto;padding:20px}
+.section{margin-bottom:50px}
+.card{background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}
+.btn{background:#16a085;color:#fff;border:none;padding:8px 14px;border-radius:5px;cursor:pointer}
+.btn:hover{background:#138d75}
+input,textarea,select{width:100%;padding:8px;margin:6px 0;border:1px solid #ccc;border-radius:4px}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ddd;padding:8px;text-align:center}
+th{background:#16a085;color:#fff}
+footer{background:#0f5f53;color:#fff;text-align:center;padding:15px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<header>
+<h1>SGF Health 2026</h1>
+<p>Order – Dropshipping – Admin – Payment System</p>
+</header>
+
+<nav>
+<a href="#shop">Shop</a>
+<a href="#order">Đặt hàng</a>
+<a href="#payment">Thanh toán</a>
+<a href="#admin">Admin</a>
+</nav>
+
+<div class="container">
+
+<!-- SHOP -->
+<section id="shop" class="section">
+<h2>Sản Phẩm</h2>
+<div class="grid" id="productList"></div>
+</section>
+
+<!-- ORDER FORM -->
+<section id="order" class="section">
+<h2>Form Đặt Hàng</h2>
+<div class="card">
+<input id="cusName" placeholder="Họ tên">
+<input id="cusPhone" placeholder="Số điện thoại">
+<input id="cusAddress" placeholder="Địa chỉ">
+<select id="productSelect"></select>
+<input id="qty" type="number" min="1" value="1">
+<button class="btn" onclick="createOrder()">Tạo Đơn</button>
+</div>
+</section>
+
+<!-- PAYMENT -->
+<section id="payment" class="section">
+<h2>Thanh Toán Tự Động</h2>
+<div class="card">
+<p>🔹 Momo API (Demo)</p>
+<p>🔹 ZaloPay API (Demo)</p>
+<p>🔹 QR Bank Auto</p>
+
+<button class="btn" onclick="genQR()">Tạo QR Thanh Toán</button>
+<br><br>
+<div id="qrBox"></div>
+
+<p style="color:red">⚠ Bản này mô phỏng. Khi deploy thật sẽ tích hợp API chính thức.</p>
+</div>
+</section>
+
+<!-- ADMIN -->
+<section id="admin" class="section">
+<h2>Admin Panel</h2>
+
+<div class="card">
+<h3>➕ Thêm Sản Phẩm</h3>
+<input id="pName" placeholder="Tên SP">
+<input id="pPrice" type="number" placeholder="Giá">
+<button class="btn" onclick="addProduct()">Thêm</button>
+</div>
+
+<br>
+
+<div class="card">
+<h3>📦 Quản Lý Đơn Hàng</h3>
+<button class="btn" onclick="exportExcel()">Xuất Excel</button>
+<table>
+<thead>
+<tr><th>ID</th><th>Khách</th><th>SĐT</th><th>SP</th><th>SL</th><th>Tổng</th></tr>
+</thead>
+<tbody id="orderTable"></tbody>
+</table>
+</div>
+
+<br>
+
+<div class="card">
+<h3>📊 Doanh Thu</h3>
+<p>Tổng doanh thu: <b id="revenue">0</b> đ</p>
+</div>
+
+<br>
+
+<div class="card">
+<h3>📝 Bài Viết Bệnh Học</h3>
+<input id="postTitle" placeholder="Tiêu đề">
+<textarea id="postContent" placeholder="Nội dung"></textarea>
+<button class="btn" onclick="addPost()">Đăng</button>
+<div id="postList"></div>
+</div>
+
+</section>
+
+</div>
+
+<footer>
+<p>© 2026 SGF Health System</p>
+</footer>
+
+<script>
+// DATA STORAGE
+let products=JSON.parse(localStorage.getItem('products'))||[
+{name:'Viên Tim Mạch',price:350000},
+{name:'Thảo Dược Gan',price:280000},
+{name:'Canxi Xương',price:320000}
+];
+
+let orders=JSON.parse(localStorage.getItem('orders'))||[];
+let posts=JSON.parse(localStorage.getItem('posts'))||[];
+
+// INIT
+renderProducts();
+renderSelect();
+renderOrders();
+renderPosts();
+calcRevenue();
+
+// PRODUCTS
+function renderProducts(){
+let html='';
+products.forEach(p=>{
+html+=`<div class='card'><h3>${p.name}</h3><p>${p.price.toLocaleString()}đ</p></div>`;
+});
+document.getElementById('productList').innerHTML=html;
+}
+
+function renderSelect(){
+let html='';
+products.forEach((p,i)=>{
+html+=`<option value='${i}'>${p.name}</option>`;
+});
+document.getElementById('productSelect').innerHTML=html;
+}
+
+function addProduct(){
+let name=pName.value;
+let price=Number(pPrice.value);
+if(!name||!price)return alert('Thiếu dữ liệu');
+products.push({name,price});
+save();
+renderProducts();
+renderSelect();
+pName.value='';pPrice.value='';
+}
+
+// ORDER
+function createOrder(){
+let name=cusName.value;
+let phone=cusPhone.value;
+let address=cusAddress.value;
+let pid=productSelect.value;
+let q=Number(qty.value);
+
+if(!name||!phone||!address)return alert('Nhập đủ thông tin');
+
+let p=products[pid];
+let total=p.price*q;
+
+let order={
+id:Date.now(),name,phone,address,
+product:p.name,qty:q,total
+};
+
+orders.push(order);
+save();
+renderOrders();
+calcRevenue();
+alert('Tạo đơn thành công');
+}
+
+function renderOrders(){
+let html='';
+orders.forEach(o=>{
+html+=`<tr><td>${o.id}</td><td>${o.name}</td><td>${o.phone}</td><td>${o.product}</td><td>${o.qty}</td><td>${o.total.toLocaleString()}</td></tr>`;
+});
+document.getElementById('orderTable').innerHTML=html;
+}
+
+// EXPORT EXCEL (CSV)
+function exportExcel(){
+let csv='ID,Ten,SDT,SanPham,SoLuong,Tong\n';
+orders.forEach(o=>{
+csv+=`${o.id},${o.name},${o.phone},${o.product},${o.qty},${o.total}\n`;
+});
+
+let blob=new Blob([csv],{type:'text/csv'});
+let a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download='orders_sgf_2026.csv';
+a.click();
+}
+
+// PAYMENT QR (Demo)
+function genQR(){
+let total=orders.reduce((s,o)=>s+o.total,0);
+let bank='VCB|123456789|'+total;
+document.getElementById('qrBox').innerHTML=
+`<img src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${bank}'>`;
+}
+
+// REVENUE
+function calcRevenue(){
+let sum=orders.reduce((s,o)=>s+o.total,0);
+document.getElementById('revenue').innerText=sum.toLocaleString();
+}
+
+// POSTS
+function addPost(){
+let t=postTitle.value;
+let c=postContent.value;
+if(!t||!c)return alert('Thiếu nội dung');
+posts.push({t,c});
+save();
+renderPosts();
+postTitle.value='';postContent.value='';
+}
+
+function renderPosts(){
+let html='';
+posts.forEach(p=>{
+html+=`<div class='card'><h4>${p.t}</h4><p>${p.c}</p></div>`;
+});
+document.getElementById('postList').innerHTML=html;
+}
+
+// SAVE
+function save(){
+localStorage.setItem('products',JSON.stringify(products));
+localStorage.setItem('orders',JSON.stringify(orders));
+localStorage.setItem('posts',JSON.stringify(posts));
+}
+</script>
+
+</body>
+</html>
